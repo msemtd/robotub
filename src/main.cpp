@@ -1,4 +1,3 @@
-
 /*******************************************
  *   _____       _        _______    _     *
  *  |  __ \     | |      |__   __|  | |    *
@@ -15,22 +14,25 @@
  ******************************************/
 //
 // Currently building for...
-// NodeMCU 1.0 (ESP-12E Module) https://github.com/nodemcu/nodemcu-devkit-v1.0
+// d1_mini ESP8266
 //
+#include <Arduino.h>
 
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <WiFiUdp.h>
+#include <WiFiManager.h> //https://github.com/tzapu/WiFiManager
 #include <OneWire.h>
 #include <DallasTemperature.h> // https://github.com/milesburton/Arduino-Temperature-Control-Library
-#include <WiFiUdp.h>
-#include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 
-bool blinkVal = false;
-#define TAP_HOT D0
-#define TAP_COLD D1
-#define ONE_WIRE_BUS D2
+bool blinkVal = true;
+#define TAP_HOT D1     // GPIO5
+#define TAP_COLD D2 // GPIO4
 // NB: GPIO0 (D3) is pulled high during normal operation, so you can’t use it as a Hi-Z input
 // See https://tttapa.github.io/ESP8266/Chap04%20-%20Microcontroller.html
 // NB: GPIO2 (D4) MUST REMAIN HIGH at boot
-#define FLOAT_SWITCH D5
+#define FLOAT_SWITCH D5 // GPIO14
+#define ONE_WIRE_BUS D6 // GPIO12
 
 OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
@@ -49,98 +51,151 @@ String serialInputString = ""; // a String to hold incoming serial data
 bool serialMsgReady = false;   // whether the string is complete
 String errString = "";
 
+/*
+  The resolution of the temperature sensor is user-configurable to
+  9, 10, 11, or 12 bits, corresponding to increments of 0.5C,
+  0.25C, 0.125C, and 0.0625C, respectively.
+  The default resolution at power-up is 12-bit.
+  */
+int resolution = 11;
+float temperature = 0.0;
+
 void setup()
 {
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, (blinkVal ? HIGH : LOW));
-    pinMode(TAP_HOT, OUTPUT);
-    digitalWrite(TAP_HOT, LOW);
-    pinMode(TAP_COLD, OUTPUT);
-    digitalWrite(TAP_COLD, LOW);
-    pinMode(FLOAT_SWITCH, INPUT_PULLUP);
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, (blinkVal ? HIGH : LOW));
+  pinMode(TAP_HOT, OUTPUT);
+  digitalWrite(TAP_HOT, LOW);
+  pinMode(TAP_COLD, OUTPUT);
+  digitalWrite(TAP_COLD, LOW);
+  pinMode(FLOAT_SWITCH, INPUT_PULLUP);
 
-    Serial.begin(115200);
-    serialInputString.reserve(200);
+  Serial.begin(115200);
+  serialInputString.reserve(200);
 
-    sensors.begin();
-    WiFi.mode(WIFI_STA);
-    WiFiManager wm;
-    // wipe credentials for testing
-    // wm.resetSettings();
-    bool res = wm.autoConnect("RoboTub10000", "robotub4919"); // password protected ap
-    if (!res)
-    {
-        Serial.println("Failed to connect");
-        // ESP.restart();
-    }
-    else
-    {
-        Serial.println("connected :)");
-    }
+  sensors.begin();
+  DeviceAddress tempDeviceAddress;
+  sensors.getAddress(tempDeviceAddress, 0);
+  sensors.setResolution(tempDeviceAddress, resolution);
+  sensors.setWaitForConversion(false);
+
+  WiFiManager wm;
+  // wipe credentials for testing
+  // wm.resetSettings();
+  bool res = wm.autoConnect("RoboTub10000", "robotub4919"); // password protected ap
+  if (!res)
+  {
+    Serial.println("Failed to connect");
+    // ESP.restart();
+  }
+  else
+  {
+    Serial.println("connected :)");
+  }
 }
 
-void loop()
+void blinky()
 {
-    int floatVal = digitalRead(FLOAT_SWITCH);
-    // Get temperature - TODO don't wait here for result - see lib docs
+  static unsigned long last = 0;
+  unsigned long now = millis();
+  if (now - last < 500)
+    return;
+  blinkVal = !blinkVal;
+  digitalWrite(LED_BUILTIN, (blinkVal ? HIGH : LOW));
+  last = now;
+}
+
+void doTemperature()
+{
+  static unsigned long last = 0;
+  unsigned long now = millis();
+  // first time round...
+  if(last == 0) {
     sensors.requestTemperatures();
-    float tempC = sensors.getTempCByIndex(0);
-    errString = (tempC == DEVICE_DISCONNECTED_C) ? "TEMP-FAIL" : "TEMP-OK";
-    sprintf(broadcastBuf, "Temp: %.2fC, Float: %d, Hot: ?, Cold: ?, Err: %s\n", tempC, floatVal, errString.c_str());
-    Serial.write(broadcastBuf, strlen(broadcastBuf));
-    blinkVal = !blinkVal;
-    digitalWrite(LED_BUILTIN, (blinkVal ? HIGH : LOW));
-    serialEventNotOnESP();
-    procSerialMsg();
+    last = now;
+    return;
+  }
+  unsigned long delayInMillis = 750 / (1 << (12 - resolution));
+  if(now - last < delayInMillis)
+    return;
+  temperature = sensors.getTempCByIndex(0);
+  Serial.print(" Temperature: ");
+  Serial.println(temperature);
+  sensors.requestTemperatures();
+  last = millis();
 }
 
 // Hmm, serialEvent doesn't work on ESP8622 so we gotta call it in the loop
 void serialEventNotOnESP()
 {
-    while (Serial.available())
+  while (Serial.available())
+  {
+    char inChar = (char)Serial.read();
+    serialInputString += inChar;
+    if (inChar == '\n')
     {
-        char inChar = (char)Serial.read();
-        serialInputString += inChar;
-        if (inChar == '\n')
-        {
-            serialMsgReady = true;
-            return; // allow immediate processing
-        }
+      serialMsgReady = true;
+      return; // allow immediate processing
     }
-}
-
-inline void procSerialMsg()
-{
-    if (!serialMsgReady)
-        return;
-    serialInputString.trim();
-    procCommand(serialInputString);
-    serialInputString = "";
-    serialMsgReady = false;
+  }
 }
 
 void procCommand(const String &msg)
 {
-    Serial.print(msg);
-    if (msg.startsWith("TAP_HOT_"))
-    {
-        digitalWrite(TAP_HOT, (msg[8] == '1' ? HIGH : LOW));
-        Serial.println("OK :)");
-    }
-    else if (msg.startsWith("TAP_COLD_"))
-    {
-        digitalWrite(TAP_COLD, (msg[9] == '1' ? HIGH : LOW));
-        Serial.println("OK :)");
-    }
-    else
-    {
-        Serial.println("dunno that :)");
-    }
+  Serial.print(msg);
+  if (msg.startsWith("TAP_HOT_"))
+  {
+    digitalWrite(TAP_HOT, (msg[8] == '1' ? HIGH : LOW));
+    Serial.println("OK :)");
+  }
+  else if (msg.startsWith("TAP_COLD_"))
+  {
+    digitalWrite(TAP_COLD, (msg[9] == '1' ? HIGH : LOW));
+    Serial.println("OK :)");
+  }
+  else
+  {
+    Serial.println("dunno that :)");
+  }
 }
+
+inline void procSerialMsg()
+{
+  if (!serialMsgReady)
+    return;
+  serialInputString.trim();
+  procCommand(serialInputString);
+  serialInputString = "";
+  serialMsgReady = false;
+}
+
 
 void sendBroadcastUDP()
 {
     udp.beginPacketMulticast(broadcast, broadcastPort, WiFi.localIP(), 4);
     udp.write(broadcastBuf);
     udp.endPacket();
+}
+
+void doBroadcast()
+{
+  static unsigned long last = 0;
+  unsigned long now = millis();
+  if (now - last < 600)
+    return;
+  last = now;
+  Serial.write(broadcastBuf, strlen(broadcastBuf));
+  sendBroadcastUDP();
+}
+
+void loop()
+{
+  int floatVal = digitalRead(FLOAT_SWITCH);
+  serialEventNotOnESP();
+  blinky();
+  doTemperature();
+  errString = (temperature == DEVICE_DISCONNECTED_C) ? "TEMP-FAIL" : "TEMP-OK";
+  sprintf(broadcastBuf, "Temp: %.2fC, Float: %d, Hot: ?, Cold: ?, Status: %s\n", temperature, floatVal, errString.c_str());
+  doBroadcast();
+  delay(100);
 }
