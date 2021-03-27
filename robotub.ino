@@ -113,6 +113,7 @@ inline void procSerialMsg()
 {
     if (!serialMsgReady)
         return;
+    serialInputString.trim();
     procCommand(serialInputString);
     serialInputString = "";
     serialMsgReady = false;
