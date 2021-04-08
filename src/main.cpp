@@ -28,6 +28,8 @@
 #include <DallasTemperature.h> // https://github.com/milesburton/Arduino-Temperature-Control-Library
 #include <PID_v1.h>
 #include <time.h>
+#include <string.h>
+
 
 bool blinkVal = true;
 #define TAP_HOT D1  // GPIO5
@@ -79,6 +81,10 @@ char webpage[] PROGMEM = R"=====(
 <div>
   <input type="range" min="1" max="10" value="5" id="dataRateSlider" oninput="sendDataRate()" />
   <label for="dataRateSlider" id="dataRateLabel">Rate: 0.2Hz</label>
+  <input type="button" value="HOT ON" onclick="sendTapControl('HOT', '1')">
+  <input type="button" value="HOT OFF" onclick="sendTapControl('HOT', '0')">
+  <input type="button" value="COLD ON" onclick="sendTapControl('COLD', '1')">
+  <input type="button" value="COLD OFF" onclick="sendTapControl('COLD', '0')">
 </div>
 <hr />
 <div>
@@ -125,16 +131,28 @@ char webpage[] PROGMEM = R"=====(
     dataRate = 1.0/dataRate;
     document.getElementById("dataRateLabel").innerHTML = "Rate: " + dataRate.toFixed(2) + "Hz";
   }
+  function sendTapControl(tap, control) {
+    webSocket.send('TAP_' + tap + '_' + control)
+  }
 </script>
 </body>
 </html>
 )=====";
+
+void procCommand(const String &msg);
 
 void webSocketEvent(uint8_t num, WStype_t type, uint8_t *payload, size_t length)
 {
   // Do something with the data from the client
   if (type == WStype_TEXT)
   {
+    if (!strncmp((const char *)payload, "TAP_", 4)) {
+      String cmd((const char *)payload);
+      Serial.print("websocket tap control ");
+      Serial.println(cmd);
+      procCommand(cmd);
+      return;
+    }
     float dataRate = (float)atof((const char *)&payload[0]);
     Serial.print("websocket says change data rate to ");
     Serial.println(dataRate);
