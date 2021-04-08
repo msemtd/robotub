@@ -1,5 +1,16 @@
 {
     "clang-tidy.checks": [
     "!**"
-    ]
+    ],
+    "clang-format.language.cpp.style": "LLVM",
+    "files.associations": {
+        "array": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "initializer_list": "cpp",
+        "regex": "cpp"
+    },
 }
