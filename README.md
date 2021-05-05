@@ -60,6 +60,28 @@ static const uint8_t D8   = 15;
 static const uint8_t RX   = 3;
 static const uint8_t TX   = 1;
 ```
+
+```
+             +-------------------+
+             |      ANTENNA      |
+       Reset |x RST          TX x| TXD
+max 3.3v  A0 |x A0           RX x| RXD
+      GPIO16 |x D0           D1 x| GPIO5 SCL
+SCK   GPIO14 |x D5           D2 x| GPIO4 SDA
+MISO  GPIO12 |x D6           D3 x| GPIO0 10k Pull-up
+MOSI  GPIO13 |x D7           D4 x| GPIO2 10k Pull-up, BUILTIN_LED
+SS*   GPIO15 |x D8            G x| GND
+         3V3 |x 3V3          5V x| 5V
+             |Reset       D1 mini|     (SS* 10k pull-down)
+             +-------|USB|-------+
+```
+
+Various caveats: -
+* GPIO15 (D8) is always pulled low, so you can't use the internal pull-up resistor. You have to keep this in mind when using GPIO15 as an input to read a switch or connect it to a device with an open-collector (or open-drain) output, like I2C.
+* GPIO0 (D3) is pulled high during normal operation, so you can't use it as a Hi-Z input.
+* GPIO2 (D4) can't be low at boot, so you can't connect a switch to it.
+
+
 ## NTP to set the clock
 
 On previous projects I was doing way too much work messing around crafting my own NTP packets and decoding responses when it turns out time on the ESP8266 can be set automagically internally with NTP by adding just a couple of lines of code! Here's a sequence of improvements I followed...
@@ -79,8 +101,8 @@ I've been messing with UDP multicast for various projects around the house so I 
 A simple socket server running on a chosen port or could use a HTTP server and expose a simple web interface.
 
 Tried a few things and found that the WiFiManager (https://github.com/tzapu/WiFiManager)
-doesn't play nice with async webserver and 
-khoih-prog/ESPAsync_WiFiManager just doesn't work reliably on my D1 mini for some reason.
+doesn't play nice with async webserver and khoih-prog/ESPAsync_WiFiManager just doesn't
+work reliably on my D1 mini for some reason.
 So using the simplest possible webserver and a websocket conenction to hand out the current status information.
 
 ## Add-on temperature display
@@ -88,3 +110,19 @@ So using the simplest possible webserver and a websocket conenction to hand out 
 I do like 7-Segment displays! There's not many pins on the D1 Mini so perhaps use an additional cheap micro like a ProMini to do that for me and drive it over the serial.
 Mine is labelled SMA420564
 https://wokwi.com/arduino/libraries/SevSeg/SevSeg_Counter
+
+## PID control for temperature
+
+(proportional-integral-derivative controller)
+* https://www.youtube.com/watch?v=LXhTFBGgskI
+* https://playground.arduino.cc/Code/PIDLibrary/
+* http://brettbeauregard.com/blog/2011/04/improving-the-beginners-pid-introduction/
+
+## Additional MCP9808 temperature sensor
+
+The MCP9808 might be more accurate and/or responsive so testing one.
+Unfortunately it isn't in a nicely waterproofed housing so I'll have to pot it in epoxy resin or similar.
+
+* MCP9808 vs Dallas DS18B20
+* using arduino wire
+* shuffle all connections around so they fit (and work!)

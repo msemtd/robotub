@@ -29,16 +29,21 @@
 #include <PID_v1.h>
 #include <time.h>
 #include <string.h>
+#include <Wire.h>
+#include "Adafruit_MCP9808.h"
+
 
 
 bool blinkVal = true;
-#define TAP_HOT D1  // GPIO5
-#define TAP_COLD D2 // GPIO4
+#define TMPC_SCL D1  // GPIO5
+#define TMPC_SDA D2 // GPIO4
 // NB: GPIO0 (D3) is pulled high during normal operation, so you can’t use it as a Hi-Z input
 // See https://tttapa.github.io/ESP8266/Chap04%20-%20Microcontroller.html
 // NB: GPIO2 (D4) MUST REMAIN HIGH at boot
 #define FLOAT_SWITCH D5 // GPIO14
 #define ONE_WIRE_BUS D6 // GPIO12
+#define TAP_HOT D7  // GPIO13
+#define TAP_COLD D8 // GPIO15
 
 String serialInputString = ""; // a String to hold incoming serial data
 bool serialMsgReady = false;   // whether the string is complete
@@ -53,6 +58,9 @@ DallasTemperature sensors(&oneWire);
   */
 int resolution = 11;
 float temperature = 0.0;
+
+Adafruit_MCP9808 mpcsensor = Adafruit_MCP9808();
+float mpctemperature = -127.0;
 
 /* Configuration of NTP */
 #define MY_NTP_SERVER "time.nist.gov"
@@ -179,6 +187,11 @@ void setup()
   sensors.setResolution(tempDeviceAddress, resolution);
   sensors.setWaitForConversion(false);
 
+  if(!mpcsensor.begin()) {
+    Serial.println("Couldn't find MCP9808! Check your connections and verify the address is correct.");
+  }
+  mpcsensor.setResolution(3); // sets the resolution mode of reading, the modes are defined in the table bellow:
+
   WiFiManager wm;
   // wipe credentials for testing
   // wm.resetSettings();
@@ -227,9 +240,23 @@ void doTemperature()
   if (now - last < delayInMillis)
     return;
   temperature = sensors.getTempCByIndex(0);
-  Serial.print(" Temperature: ");
-  Serial.println(temperature);
+  // Serial.print(" Temperature: ");
+  // Serial.println(temperature);
   sensors.requestTemperatures();
+  last = millis();
+}
+
+void doMpcTemperature()
+{
+  static unsigned long last = 0;
+  unsigned long now = millis();
+  if (now - last < 400)
+    return;
+  mpcsensor.wake();
+  mpctemperature = mpcsensor.readTempC();
+  // Serial.print(" MPC Temperature: ");
+  // Serial.println(mpctemperature);
+  mpcsensor.shutdown_wake(1);
   last = millis();
 }
 
@@ -307,8 +334,9 @@ void loop()
   serialEventNotOnESP();
   blinky();
   doTemperature();
+  doMpcTemperature();
   errString = (temperature == DEVICE_DISCONNECTED_C) ? "TEMP-FAIL" : "TEMP-OK";
-  sprintf(broadcastBuf, "Temp: %.2fC, Float: %d, Hot: ?, Cold: ?, Status: %s\n", temperature, floatVal, errString.c_str());
+  sprintf(broadcastBuf, "Temp: %.2fC, Temp2: %.2fC, Float: %d, Hot: ?, Cold: ?, Status: %s\n", temperature, mpctemperature, floatVal, errString.c_str());
   server.handleClient();
   webSocket.loop();
   doBroadcast();
