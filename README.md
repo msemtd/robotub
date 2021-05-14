@@ -14,6 +14,7 @@ Initial hardware tests are promising: I'm currently using components from online
 * The Dallas DS18B20 sensor (£2.49 eBay) is quick to respond to being warmed up, say, by a hand, but when the heat is removed it is slow to cool down again. I'm not sure why this is but I'm gonna go with it since it's cheap and it may be quick enough for this application
 * The float switch (£3.49 eBay) is pretty neat and just kinda works.
 
+![solenoid assemblies](robotub-solenoid-assembly.png)
 
 ## PlatformIO
 Now ported from an Arduino sketch to PlatformIO (https://platformio.org/)
@@ -81,7 +82,13 @@ Various caveats: -
 * GPIO0 (D3) is pulled high during normal operation, so you can't use it as a Hi-Z input.
 * GPIO2 (D4) can't be low at boot, so you can't connect a switch to it.
 
+## Fritzing breadboard view
 
+When all the I/O compatibilities are taken account of, we have something like this...
+
+![Robotto yokusō](robotub-full-1.png)
+
+There is just enough I/O on the D1 Mini to support the basic requirements. For anything further I'll be sending serial commands to additional Pro Micro boards
 ## NTP to set the clock
 
 On previous projects I was doing way too much work messing around crafting my own NTP packets and decoding responses when it turns out time on the ESP8266 can be set automagically internally with NTP by adding just a couple of lines of code! Here's a sequence of improvements I followed...
@@ -126,3 +133,9 @@ Unfortunately it isn't in a nicely waterproofed housing so I'll have to pot it i
 * MCP9808 vs Dallas DS18B20
 * using arduino wire
 * shuffle all connections around so they fit (and work!)
+
+## Webserver
+
+The built in webserver is mainly showing a chart of temperature and providing simple controls.
+The charting is a perfomance hog though and I really should migrate the chart.js to 3.0.
+I don't think my use-case is particularly uncommon so it should be an easy upgrade!
