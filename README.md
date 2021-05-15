@@ -2,9 +2,9 @@
 RoboTub 10000 - bath preparation automation
 
 # ロボット浴槽10000
-Robotto yokusō 10000
+Robotto Yokusō 10000
 
-![Robotto yokusō](text881.png)
+![Robotto yokusō](media/text881.png)
 
 I was enthralled by videos of Japanese automated bathtubs and whilst I am unable to afford such a wonderful consumer item I am able to mess around with modern cheap electronics. My initial aim was to automatically stop the taps when the bath was full. It wouldn't be much more trouble to control the volume of hot and cold water to reach a target temperature. Adding WiFi control is almost trivial with inexpensive ESP8266-based micros! And a project like this keeps me off the streets.
 
@@ -14,7 +14,7 @@ Initial hardware tests are promising: I'm currently using components from online
 * The Dallas DS18B20 sensor (£2.49 eBay) is quick to respond to being warmed up, say, by a hand, but when the heat is removed it is slow to cool down again. I'm not sure why this is but I'm gonna go with it since it's cheap and it may be quick enough for this application
 * The float switch (£3.49 eBay) is pretty neat and just kinda works.
 
-![solenoid assemblies](robotub-solenoid-assembly.png)
+![solenoid assemblies](media/robotub-solenoid-assembly.png)
 
 ## PlatformIO
 Now ported from an Arduino sketch to PlatformIO (https://platformio.org/)
@@ -86,9 +86,15 @@ Various caveats: -
 
 When all the I/O compatibilities are taken account of, we have something like this...
 
-![Robotto yokusō](robotub-full-1.png)
+![Robotto yokusō](media/robotub-full-1.png)
 
 There is just enough I/O on the D1 Mini to support the basic requirements. For anything further I'll be sending serial commands to additional Pro Micro boards
+
+## Solenoid valve driver and power board
+![Robotto yokusō](media/robotub-valve-control-and-power.png)
+
+All of the 12V stuff is on bit of this crappy protoboard (I hate this stuff but have lots to use up!). The 5V power from the buck regulator and the hot and cold digital control lines connect to the MCU/Sensor connection board.
+
 ## NTP to set the clock
 
 On previous projects I was doing way too much work messing around crafting my own NTP packets and decoding responses when it turns out time on the ESP8266 can be set automagically internally with NTP by adding just a couple of lines of code! Here's a sequence of improvements I followed...

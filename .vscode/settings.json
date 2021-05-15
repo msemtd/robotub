@@ -13,4 +13,9 @@
         "initializer_list": "cpp",
         "regex": "cpp"
     },
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#223031",
+        "titleBar.activeBackground": "#2F4345",
+        "titleBar.activeForeground": "#F8FAFA"
+    },
 }
