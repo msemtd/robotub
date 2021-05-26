@@ -95,6 +95,12 @@ There is just enough I/O on the D1 Mini to support the basic requirements. For a
 
 All of the 12V stuff is on bit of this crappy protoboard (I hate this stuff but have lots to use up!). The 5V power from the buck regulator and the hot and cold digital control lines connect to the MCU/Sensor connection board.
 
+## MCU/Sensor board
+
+![Robotto yokusō](media/robotub-sensor-board.png)
+
+The two temperature and the float switch sensors go off to the left of the picture and the hot and cold control lines, and the 5V power-in are at the top.
+
 ## NTP to set the clock
 
 On previous projects I was doing way too much work messing around crafting my own NTP packets and decoding responses when it turns out time on the ESP8266 can be set automagically internally with NTP by adding just a couple of lines of code! Here's a sequence of improvements I followed...
@@ -143,5 +149,7 @@ Unfortunately it isn't in a nicely waterproofed housing so I'll have to pot it i
 ## Webserver
 
 The built in webserver is mainly showing a chart of temperature and providing simple controls.
-The charting is a perfomance hog though and I really should migrate the chart.js to 3.0.
-I don't think my use-case is particularly uncommon so it should be an easy upgrade!
+There is a single HTML page utilising Chart.js with data sent over a websocket on port 81.
+For development of the webpage I've added `test-server.js` which serves up `test.html` and provides fake data to show in the chart. Changes in this file can be injected into `src/main.cpp` using the `inject.js` script.
+
+TODO: use rollup or similar to minify the webpage.

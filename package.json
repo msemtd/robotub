@@ -1,0 +1,22 @@
+{
+  "name": "robotub",
+  "version": "1.0.0",
+  "description": "test server for RoboTub 10000",
+  "main": "index.js",
+  "repository": "https://github.com/msemtd/robotub.git",
+  "author": "Michael Erskine <michael.erskine@geoslam.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "inject": "node media/inject.js",
+    "serve": "node media/test-server.js"
+  },
+  "dependencies": {
+    "express": "^4.17.1",
+    "ws": "^7.4.6"
+  },
+  "devDependencies": {
+    "eslint": "^7.27.0",
+    "eslint-plugin-html": "^6.1.2"
+  }
+}

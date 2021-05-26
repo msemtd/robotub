@@ -80,71 +80,92 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 // formatted as a string literal!
 char webpage[] PROGMEM = R"=====(
 <html>
-<!-- Adding a data chart using Chart.js -->
-<head>
-  <script src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js'></script>
-</head>
-<body onload="javascript:init()">
-<!-- Adding a slider for controlling data rate -->
-<div>
-  <input type="range" min="1" max="10" value="5" id="dataRateSlider" oninput="sendDataRate()" />
-  <label for="dataRateSlider" id="dataRateLabel">Rate: 0.2Hz</label>
-  <input type="button" value="HOT ON" onclick="sendTapControl('HOT', '1')">
-  <input type="button" value="HOT OFF" onclick="sendTapControl('HOT', '0')">
-  <input type="button" value="COLD ON" onclick="sendTapControl('COLD', '1')">
-  <input type="button" value="COLD OFF" onclick="sendTapControl('COLD', '0')">
-</div>
-<hr />
-<div>
-  <canvas id="line-chart" width="800" height="450"></canvas>
-</div>
-<!-- Adding a websocket to the client (webpage) -->
-<script>
-  var webSocket, dataPlot;
-  var maxDataPoints = 20;
-  function removeData(){
-    dataPlot.data.labels.shift();
-    dataPlot.data.datasets[0].data.shift();
-  }
-  function addData(label, data) {
-    if(dataPlot.data.labels.length > maxDataPoints) removeData();
-    dataPlot.data.labels.push(label);
-    dataPlot.data.datasets[0].data.push(data);
-    dataPlot.update();
-  }
-  function init() {
-    webSocket = new WebSocket('ws://' + window.location.hostname + ':81/');
-    dataPlot = new Chart(document.getElementById("line-chart"), {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [{
-          data: [],
-          label: "Temperature (C)",
-          borderColor: "#3e95cd",
-          fill: false
-        }]
+  <!-- Adding a data chart using Chart.js -->
+  <head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.3.0/chart.min.js"></script>
+  </head>
+  <body onload="javascript:init()">
+    <div id="hdn">RoboTub 10000</div>
+    <div>
+      <input type="range" min="1" max="10" value="5" id="dataRateSlider" oninput="sendDataRate()" />
+      <label for="dataRateSlider" id="dataRateLabel">Rate: 0.2Hz</label>
+      <input type="button" value="HOT ON" onclick="sendTapControl('HOT', '1')" />
+      <input type="button" value="HOT OFF" onclick="sendTapControl('HOT', '0')" />
+      <input type="button" value="COLD ON" onclick="sendTapControl('COLD', '1')" />
+      <input type="button" value="COLD OFF" onclick="sendTapControl('COLD', '0')" />
+    </div>
+    <hr />
+    <div>
+      <canvas id="line-chart" width="600" height="400"></canvas>
+    </div>
+    <script>
+      var webSocket, dataPlot
+      var maxDataPoints = 20
+      function removeData() {
+        dataPlot.data.labels.shift()
+        dataPlot.data.datasets[0].data.shift()
       }
-    });
-    webSocket.onmessage = function(event) {
-      var data = JSON.parse(event.data);
-      var today = new Date();
-      var t = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
-      addData(t, data.value);
-    }
-  }
-  function sendDataRate(){
-    var dataRate = document.getElementById("dataRateSlider").value;
-    webSocket.send(dataRate);
-    dataRate = 1.0/dataRate;
-    document.getElementById("dataRateLabel").innerHTML = "Rate: " + dataRate.toFixed(2) + "Hz";
-  }
-  function sendTapControl(tap, control) {
-    webSocket.send('TAP_' + tap + '_' + control)
-  }
-</script>
-</body>
+      function addData(label, data) {
+        if (dataPlot.data.labels.length > maxDataPoints) removeData()
+        dataPlot.data.labels.push(label)
+        dataPlot.data.datasets[0].data.push(data)
+        dataPlot.update()
+      }
+      function startWebsock() {
+        webSocket = new WebSocket('ws://' + window.location.hostname + ':81/')
+        webSocket.onmessage = function (event) {
+          try {
+            const data = JSON.parse(event.data)
+            const now = new Date()
+            const t = now.toLocaleTimeString('en-GB')
+            // var t = today.getHours() + ':' + today.getMinutes() + ':' + today.getSeconds()
+            addData(t, data.value)
+          } catch (error) {
+            console.error('hmm, ws message not good', error)
+          }
+        }
+      }
+      function init() {
+        dataPlot = new Chart(document.getElementById('line-chart'), {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [
+              {
+                data: [],
+                label: 'Temperature (C)',
+                borderColor: '#3e95cd',
+                fill: false,
+              },
+            ],
+          },
+          options: {
+            animation: false,
+            tension: 0,
+            scales: {
+              y: {
+                type: 'linear',
+                min: 15,
+                max: 50,
+              },
+            },
+          },
+        })
+        startWebsock()
+      }
+      function sendDataRate() {
+        var dataRate = document.getElementById('dataRateSlider').value
+        webSocket.send(dataRate)
+        dataRate = 1.0 / dataRate
+        document.getElementById('dataRateLabel').innerHTML = 'Rate: ' + dataRate.toFixed(2) + 'Hz'
+      }
+      function sendTapControl(tap, control) {
+        webSocket.send('TAP_' + tap + '_' + control)
+      }
+    </script>
+  </body>
 </html>
+
 )=====";
 
 void procCommand(const String &msg);
@@ -316,7 +337,7 @@ void doBroadcast()
 {
   static unsigned long last = 0;
   unsigned long now = millis();
-  if (now - last < 600)
+  if (now - last < 990)
     return;
   last = now;
   Serial.write(broadcastBuf, strlen(broadcastBuf));
