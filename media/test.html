@@ -1,22 +1,9 @@
 <html>
   <!-- Adding a data chart using Chart.js -->
   <head>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.3.0/chart.min.js"></script>
-  </head>
-  <body onload="javascript:init()">
-    <div id="hdn">RoboTub 10000</div>
-    <div>
-      <input type="range" min="1" max="10" value="5" id="dataRateSlider" oninput="sendDataRate()" />
-      <label for="dataRateSlider" id="dataRateLabel">Rate: 0.2Hz</label>
-      <input type="button" value="HOT ON" onclick="sendTapControl('HOT', '1')" />
-      <input type="button" value="HOT OFF" onclick="sendTapControl('HOT', '0')" />
-      <input type="button" value="COLD ON" onclick="sendTapControl('COLD', '1')" />
-      <input type="button" value="COLD OFF" onclick="sendTapControl('COLD', '0')" />
-    </div>
-    <hr />
-    <div>
-      <canvas id="line-chart" width="600" height="400"></canvas>
-    </div>
+    <link rel="icon" href="https://raw.githubusercontent.com/msemtd/robotub/main/media/favicon.ico">
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.3.1/chart.js"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.3.1/chart.min.js"></script>
     <script>
       var webSocket, dataPlot
       var maxDataPoints = 20
@@ -82,5 +69,20 @@
         webSocket.send('TAP_' + tap + '_' + control)
       }
     </script>
+  </head>
+  <body onload="javascript:init()">
+    <div id="hdn">RoboTub 10000</div>
+    <div>
+      <input type="range" min="1" max="10" value="5" id="dataRateSlider" oninput="sendDataRate()" />
+      <label for="dataRateSlider" id="dataRateLabel">Rate: 0.2Hz</label>
+      <input type="button" value="HOT ON" onclick="sendTapControl('HOT', '1')" />
+      <input type="button" value="HOT OFF" onclick="sendTapControl('HOT', '0')" />
+      <input type="button" value="COLD ON" onclick="sendTapControl('COLD', '1')" />
+      <input type="button" value="COLD OFF" onclick="sendTapControl('COLD', '0')" />
+    </div>
+    <hr />
+    <div style="width: 640px; height: 480px;">
+      <canvas id="line-chart"></canvas>
+    </div>
   </body>
 </html>
